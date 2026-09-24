@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "renpy-check"
+version = "0.2.0"
+description = "Static checks for Ren'Py projects that renpy lint does not do, plus a searchable HTML code map"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "yurthon" }]
+requires-python = ">=3.8"
+keywords = ["renpy", "ren'py", "visual novel", "lint", "static analysis"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Games/Entertainment",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://github.com/yurthon/renpy-check"
+Issues = "https://github.com/yurthon/renpy-check/issues"
+
+[project.scripts]
+renpy-check = "renpy_check:main"
+renpy-codemap = "renpy_codemap:main"
+
+[tool.setuptools]
+py-modules = ["renpy_check", "renpy_codemap"]

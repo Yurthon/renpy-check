@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- `pyproject.toml`: `pip install git+https://github.com/yurthon/renpy-check` gives `renpy-check` and `renpy-codemap` commands.
+- `.pre-commit-hooks.yaml`: use it as a pre-commit hook.
+- README: codemap screenshot.
+- C04 now also checks menu captions and choices (a real `[var]%）` in a menu got past 0.2.0).
+
 ## 0.2.0 — 2026-09-24
 - New tool `renpy_codemap.py`: one searchable HTML page of every file, label (with callers, fall-through, orphans) and screen.
 - New opt-in check C17 (`--with C17`): label fall-through, including the `if`-without-`else` form.

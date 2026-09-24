@@ -40,7 +40,7 @@ MSG = {
              "`call screen` 的目标 screen 不存在"),
     "C03t": ("label named in a data table (string) does not exist",
              "表里点名的 label（字符串）不存在"),
-    "C04": ("bare % in a say line — Ren'Py treats % as a format code (write %% for a literal percent)",
+    "C04": ("bare % in a say line or menu choice — Ren'Py treats % as a format code (write %% for a literal percent)",
             "台词里有裸 %——Ren'Py 会当格式化符处理，字面的百分号要写成 %%"),
     "C05": ("screen indentation: line is indented deeper than the previous one, but the previous line does not open a block",
             "screen 缩进：上一行不是冒号结尾却多缩进了（Ren'Py 报 “does not expect a block”）"),
@@ -272,10 +272,25 @@ def collect_characters(src):
 def c04_bare_percent(src, rep, opts):
     chars = collect_characters(src) | {"narrator", "extend", "centered", "vcentered", "nvl_narrator"}
     say_re = re.compile(r'^\s*(' + "|".join(sorted(map(re.escape, chars))) + r')\s+"')
+    # a menu caption / choice is a string on its own line, optionally followed by an `if` clause, ending in ':'
+    choice_re = re.compile(r'^\s+"(?:[^"\\]|\\.)*"(?:\s+if\s+.+)?\s*:\s*(#.*)?$')
+    bare = re.compile(r"(?<!%)%(?!%)")
     for f in src.files:
+        in_menu = None
         for i, ln in enumerate(src.lines[f]):
-            if say_re.match(ln) and re.search(r"(?<!%)%(?!%)", ln.split('"', 1)[1]):
-                rep.hit("C04", src.rel(f), i + 1, ln.strip()[:80])
+            st = ln.strip()
+            if not st or st.startswith("#"):
+                continue
+            ind = len(ln) - len(ln.lstrip())
+            if in_menu is not None and ind <= in_menu:
+                in_menu = None
+            if re.match(r"^\s*menu(\s*\(.*\))?\s*:\s*(#.*)?$", ln):
+                in_menu = ind
+                continue
+            if say_re.match(ln) and bare.search(ln.split('"', 1)[1]):
+                rep.hit("C04", src.rel(f), i + 1, st[:80])
+            elif in_menu is not None and choice_re.match(ln) and bare.search(ln.split('"', 1)[1].rsplit('"', 1)[0]):
+                rep.hit("C04", src.rel(f), i + 1, st[:80])
 
 
 def c05_screen_indent(src, rep, opts):

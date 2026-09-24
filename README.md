@@ -34,6 +34,12 @@ If you got here from a search for one of the error messages below — that is th
 
 There is nothing to install. Copy `renpy_check.py` anywhere (into your project root is convenient) and run it with Python 3.
 
+If you prefer a command on your PATH, install it as a package — this gives you `renpy-check` and `renpy-codemap` commands:
+
+```
+pip install git+https://github.com/yurthon/renpy-check
+```
+
 ```
 python renpy_check.py game                 # scan a game/ folder
 python renpy_check.py .                    # a project root that contains game/ also works
@@ -54,7 +60,7 @@ It does **not** import Ren'Py and does not need the SDK, so it is fast (a 160-fi
 | C01 | truncated file / not valid UTF-8 / NUL bytes | `UnicodeDecodeError: 'utf-8' codec can't decode byte …` |
 | C02 | a line ending in `:` with no indented body | `expected a non-empty block` |
 | C03 | `jump` / `call` / `Jump()` / `Call()` target label does not exist; `call screen` target does not exist; **label names stored as strings inside dicts** (`{"label": "ev_x"}`) that point nowhere | `The label ev_x does not exist.` / `Screen … is not known.` — but only when that branch is finally reached |
-| C04 | a bare `%` in a say line | `ValueError: unsupported format character` / `incomplete format` — dialogue text goes through `%` substitution |
+| C04 | a bare `%` in a say line or a menu choice | `ValueError: unsupported format character` / `incomplete format` — dialogue text goes through `%` substitution |
 | C05 | screen-language indentation: a line indented deeper than the previous, but the previous line does not open a block | `Line is indented, but the preceding statement does not expect a block.` |
 | C06 | `init python` (priority ≤ 0) that uses a `define`/`default` from **another file** at module level | `NameError: name 'X' is not defined` — same-priority init blocks run in file-name order |
 | C07 | speaker in a say line is not a defined `Character` (typo) | `Sayer 'ee' is not a function or string.` |
@@ -99,14 +105,23 @@ A comment line near the top of a file, `# keywords: shop haggle bargain` (or `# 
 
 ## Use it from CI / pre-commit
 
+GitHub Actions:
+
 ```yaml
 # .github/workflows/renpy-check.yml
 - run: python renpy_check.py game --lang en
 ```
 
-```sh
-# .git/hooks/pre-commit
-python renpy_check.py game --quiet || exit 1
+[pre-commit](https://pre-commit.com) (runs before every commit that touches a `.rpy` file):
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/yurthon/renpy-check
+    rev: v0.2.0
+    hooks:
+      - id: renpy-check
+        args: ["game", "--lang", "en"]      # add "--with", "C17" to also catch label fall-through
 ```
 
 ## Use it with an AI coding agent
@@ -166,7 +181,7 @@ python renpy_check.py game --skip C06
 python renpy_check.py game --with C17      # 顺便报 label 落穿（默认关）
 ```
 
-退出码 0＝全绿，1＝有问题。
+退出码 0＝全绿，1＝有问题。想要命令行直接有 `renpy-check` / `renpy-codemap` 两个命令：`pip install git+https://github.com/yurthon/renpy-check`。用 [pre-commit](https://pre-commit.com) 的话，仓库里带了 hook 定义，配置写法见上面英文部分。
 
 ### 检查项一览
 
@@ -175,7 +190,7 @@ python renpy_check.py game --with C17      # 顺便报 label 落穿（默认关�
 | C01 | 文件截断／坏编码／含 NUL 字节 | `UnicodeDecodeError` |
 | C02 | 冒号结尾的行下面没有缩进内容（空块） | `expected a non-empty block` |
 | C03 | `jump`/`call`/`Jump()`/`call screen` 的目标不存在；**写在字典里的 label 字符串**（`{"label": "ev_x"}`）指向不存在的 label | `The label ev_x does not exist.`——而且要到真正走到那个分支才报 |
-| C04 | 台词里的单个 `%` | `ValueError: unsupported format character`（台词会过一遍 `%` 替换） |
+| C04 | 台词或菜单选项里的单个 `%` | `ValueError: unsupported format character`（台词会过一遍 `%` 替换） |
 | C05 | screen 语言缩进错位：上一行没开块，这一行却缩进更深 | `Line is indented, but the preceding statement does not expect a block.` |
 | C06 | `init python`（优先级 ≤ 0）在模块层直接用了**另一个文件**里的 `define`/`default` | `NameError`——同优先级 init 块按文件名顺序执行 |
 | C07 | 说话人不是已定义的 Character（打错名字） | `Sayer 'ee' is not a function or string.` |

@@ -1,0 +1,17 @@
+# Use from another project's .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/yurthon/renpy-check
+#       rev: v0.2.0
+#       hooks:
+#         - id: renpy-check
+#           args: ["game", "--lang", "en"]     # optional: add "--with", "C17"
+#
+- id: renpy-check
+  name: renpy-check
+  description: static checks for Ren'Py projects that `renpy lint` does not do
+  entry: renpy-check
+  language: python
+  pass_filenames: false
+  files: \.rpy$
+  args: ["game", "--quiet"]
