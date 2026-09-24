@@ -65,7 +65,7 @@ It does **not** import Ren'Py and does not need the SDK, so it is fast (a 160-fi
 | C13 | a screen property that landed inside an unclosed `(`/`[` (usually appended after a multi-line expression) | `expected statement` at a line that looks fine |
 | C14 | `init -N` block uses a `define`/`default` that has no priority | `NameError` — plain `define` runs at init 0, i.e. **after** every `init -N` |
 | C15 | module-level assignment to a reserved Ren'Py name (`config`, `renpy`, `store`, `persistent`, …) inside `init python` | anything from silent breakage to `AttributeError` far away from the cause |
-| C16 | `$ x = 1` inside a `python:` block | `SyntaxError: invalid syntax` — `$` is statement sugar, not Python |
+| C16 | `$ x = 1` inside a `python:` block | `SyntaxError: invalid syntax` — `$` means 'this one line is Python' in Ren'Py script; inside a `python:` block you are already in Python, so `$` is just an invalid character |
 
 ### Notes on a few of them
 
@@ -164,7 +164,7 @@ python renpy_check.py game --skip C06
 | C13 | screen 属性掉进了没闭合的括号里（多行表达式后面接属性最常见） | 在看起来没问题的一行报 `expected statement` |
 | C14 | `init -N` 块里用了没写优先级的 `define`/`default` | `NameError`——普通 `define` 是 init 0，在所有 `init -N` **之后**才执行 |
 | C15 | `init python` 里在模块层给 `config`/`renpy`/`store`/`persistent` 这类保留名赋值 | 各种离原因很远的诡异报错 |
-| C16 | `python:` 块里面写 `$ x = 1` | `SyntaxError: invalid syntax`——`$` 是 Ren'Py 语句糖，不是 Python |
+| C16 | `python:` 块里面写 `$ x = 1` | `SyntaxError: invalid syntax`——`$` 的意思是「这一行是 Python」，只在 Ren'Py 脚本里用；`python:` 块里本来就是 Python，再写 `$` 就是多了个非法字符 |
 
 ### 几条值得多说两句
 

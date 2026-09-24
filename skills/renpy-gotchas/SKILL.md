@@ -21,7 +21,7 @@ if _return is None:
 
 falls through into the branch below, which typically does `_return["item"]` → `TypeError: 'bool' object is not subscriptable`, or jumps back into the same loop forever ("I can't close this screen").
 
-**Do:** close buttons return an explicit sentinel — `Return("close")` — and callers test for it. If you must accept both: `if _return is None or _return is True:`.
+**Do:** close buttons return a fixed, non-None value — `Return("close")` — and callers test for that value. If you must accept both: `if _return is None or _return is True:`.
 **Also:** when you find this bug once, grep the whole project for `Return(None)` / bare `Return()` in `call screen` targets. It is never in only one place.
 
 ## 2. `Character(slow_cps=30)` styles the *name*, not the dialogue  ｜ 不带前缀的属性是给名牌的
@@ -58,7 +58,7 @@ Wrapping `store.adv = MyADV(...)` (or `config.notify = …`, `config.all_charact
 
 On at least some 8.5.x installs a per-character `callback=` never ran (verified with a probe that logged every event), while a function appended to `config.all_character_callbacks` received `begin`/`show`/`end` for every line with full kwargs. One global function that looks at `renpy.get_say_image_tag()` or an attribute you set on the Character is also simpler than N closures.
 
-**Do:** prefer the global list for per-line hooks (voice blips, text rhythm, dimming others). Keep the per-character one, if any, inert.
+**Do:** prefer the global list for per-line hooks (voice blips, text rhythm, dimming others). If a per-character callback is still defined, make sure it does nothing, so the effect is not applied twice if it starts firing one day.
 
 ## 8. In character callbacks, `what` has `{w}`/`{p}` already stripped — use `start`/`end`
 
@@ -82,7 +82,7 @@ Ren'Py does not complain about `define e = Character("Eve", color="#f00")` in `a
 
 ## 12. `$` inside a `python:` block is a syntax error  ｜ **[C16]**
 
-`$` is Ren'Py statement sugar for one-line Python. Inside `python:` / `init python:` you are already in Python; `$ x = 1` there is `SyntaxError: invalid syntax`.
+In Ren'Py script, `$` at the start of a line means "this one line is Python". Inside `python:` / `init python:` you are already in Python, so the `$` has no meaning there and `$ x = 1` is `SyntaxError: invalid syntax`.
 
 ## 13. Bare `%` in dialogue is a format code  ｜ **[C04]**
 

@@ -63,7 +63,7 @@ MSG = {
             "init -N 用了不带优先级的 define/default——不写数字的 define 跑在 init 0，比所有 init -N 都晚（NameError）"),
     "C15": ("module-level assignment to a Ren'Py reserved name inside init python — this overwrites the engine's global",
             "init python 的模块级把 Ren'Py 保留名当变量用了——会盖掉引擎的全局对象"),
-    "C16": ("`$ statement` inside a `python:` block — `$` is Ren'Py statement sugar and is a syntax error inside python blocks",
+    "C16": ("`$ statement` inside a `python:` block — `$` is Ren'Py's marker for 'the rest of this line is Python'; inside a python block you are already in Python, so `$` is a syntax error there",
             "`python:` 块里写了 `$ 语句`——`$` 只能在 Ren'Py 语句层用，块里面是语法错误"),
 }
 
