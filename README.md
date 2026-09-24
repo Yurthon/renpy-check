@@ -86,6 +86,8 @@ python renpy_codemap.py game                  # writes codemap.html next to game
 python renpy_codemap.py game --lang zh -o map.html --title "My VN"
 ```
 
+![codemap screenshot](docs/codemap.png)
+
 Scans the project and writes **one self-contained HTML page** with a single search box that filters everything at once:
 
 * every `.rpy` file — line count, its first comment line, its labels, screens and define/default names;
