@@ -1,5 +1,7 @@
 # renpy-check
 
+[![tests](https://github.com/yurthon/renpy-check/actions/workflows/test.yml/badge.svg)](https://github.com/yurthon/renpy-check/actions/workflows/test.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue) ![no dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
+
 Static checks for [Ren'Py](https://www.renpy.org/) projects that `renpy lint` does not do.
 One file, zero dependencies, Python 3.8+. Messages in English and 中文.
 
