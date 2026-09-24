@@ -11,6 +11,7 @@ Usage / 用法:
     python renpy_check.py game --only C08,C11          # run a subset
     python renpy_check.py game --skip C06              # skip a check
     python renpy_check.py game --label-keys label,loop # extra dict keys whose string values name labels
+    python renpy_check.py game --with C17            # also report label fall-through (opt-in)
 
 Exit code 0 = clean, 1 = problems found.  Zero dependencies, Python 3.8+.
 Every check below exists because a real game crashed on a real machine once.
@@ -23,7 +24,7 @@ import os
 import re
 import sys
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # ────────────────────────────────────────────────────────────────────────────
 # messages / 报错文案
@@ -63,6 +64,10 @@ MSG = {
             "init -N 用了不带优先级的 define/default——不写数字的 define 跑在 init 0，比所有 init -N 都晚（NameError）"),
     "C15": ("module-level assignment to a Ren'Py reserved name inside init python — this overwrites the engine's global",
             "init python 的模块级把 Ren'Py 保留名当变量用了——会盖掉引擎的全局对象"),
+    "C17": ("label falls through into the next label (no jump/return/call screen at the end) — legal, but inserting any label in between later will silently reroute it [opt-in: --with C17]",
+            "label 末尾没有 jump/return/call screen，靠「掉下去」进下一个 label——合法，但以后往中间插一个 label 它就会悄悄走错 [选开：--with C17]"),
+    "C17i": ("label ends inside an `if` branch with no `else` — when the condition is false it falls through into the next label",
+             "label 末尾的 jump/return 在一个没有 else 的 if 里——条件不成立时照样掉进下一个 label"),
     "C16": ("`$ statement` inside a `python:` block — `$` is Ren'Py's marker for 'the rest of this line is Python'; inside a python block you are already in Python, so `$` is a syntax error there",
             "`python:` 块里写了 `$ 语句`——`$` 只能在 Ren'Py 语句层用，块里面是语法错误"),
 }
@@ -586,6 +591,52 @@ def c16_dollar_in_python(src, rep, opts):
                 stk.append((ind, "other"))
 
 
+_TERM = re.compile(r"^\s*(return\b|jump\b|call\s+screen\b|\$\s*renpy\.(jump|call_screen|full_restart|quit)\b|pass\b)")
+
+
+def c17_fallthrough(src, rep, opts):
+    """opt-in: label whose body does not end in a terminating statement, immediately followed by another label.
+    Local labels (`label .x:`) are skipped as targets: they are meant to be reached by falling through."""
+    for f in src.files:
+        lines = src.lines[f]
+        labs = [(i, m.group(1)) for i, ln in enumerate(lines)
+                for m in [re.match(r"^label\s+([\w.]+)", ln)] if m]
+        for i, name in labs:
+            end = len(lines)
+            for j in range(i + 1, len(lines)):
+                ln = lines[j]
+                if ln.strip() and ln[0] not in " \t" and not ln.lstrip().startswith("#"):
+                    end = j; break
+            body = [l for l in lines[i + 1:end] if l.strip() and not l.lstrip().startswith("#")]
+            if not body:
+                continue
+            nxt = None
+            for j in range(end, len(lines)):
+                ln = lines[j]
+                m = re.match(r"^label\s+([\w.]+)", ln)
+                if m:
+                    nxt = m.group(1); break
+                if ln.strip() and ln[0] not in " \t" and not ln.lstrip().startswith("#"):
+                    break
+            if not nxt or nxt.startswith("."):
+                continue
+            last = body[-1]
+            if not _TERM.match(last):
+                rep.hit("C17", src.rel(f), i + 1, "%s -> %s   (last line: %s)" % (name, nxt, last.strip()[:60]))
+                continue
+            base = len(body[0]) - len(body[0].lstrip())
+            if len(last) - len(last.lstrip()) > base:
+                gov = None
+                for l in reversed(body[:-1]):
+                    if len(l) - len(l.lstrip()) == base:
+                        gov = l.strip(); break
+                if gov and re.match(r"(if|elif)\b", gov):
+                    has_else = any(len(l) - len(l.lstrip()) == base and l.strip().startswith("else")
+                                   for l in body)
+                    if not has_else:
+                        rep.hit("C17i", src.rel(f), i + 1, "%s -> %s   (guard: %s)" % (name, nxt, gov[:60]))
+
+
 CHECKS = [
     ("C01", c01_encoding), ("C02", c02_empty_block), ("C03", c03_jump_targets),
     ("C04", c04_bare_percent), ("C05", c05_screen_indent), ("C06", c06_init_order),
@@ -593,7 +644,9 @@ CHECKS = [
     ("C10", c10_pos_conflict), ("C11", c11_duplicates), ("C12", c12_func_vs_var),
     ("C13", c13_prop_in_parens), ("C14", c14_define_priority), ("C15", c15_reserved),
     ("C16", c16_dollar_in_python),
+    ("C17", c17_fallthrough),
 ]
+OPT_IN = {"C17"}          # run only with --with C17 or --only C17
 
 
 def find_game_dir(path):
@@ -615,6 +668,8 @@ def main(argv=None):
     ap.add_argument("--skip", default="", help="comma-separated check ids to skip")
     ap.add_argument("--label-keys", default="label,loop",
                     help="dict keys whose string values name labels (checked by C03); '' to disable")
+    ap.add_argument("--with", dest="with_", default="",
+                    help="comma-separated opt-in checks to enable, e.g. C17 (label fall-through)")
     ap.add_argument("--quiet", action="store_true", help="only print problems")
     ap.add_argument("--version", action="version", version="renpy-check " + __version__)
     opts = ap.parse_args(argv)
@@ -626,9 +681,12 @@ def main(argv=None):
     rep = Report(opts.lang)
     only = set(x.strip().upper() for x in opts.only.split(",") if x.strip())
     skip = set(x.strip().upper() for x in opts.skip.split(",") if x.strip())
+    with_ = set(x.strip().upper() for x in opts.with_.split(",") if x.strip())
     ran = 0
     for code, fn in CHECKS:
         if (only and code not in only) or code in skip:
+            continue
+        if code in OPT_IN and not (code in with_ or code in only):
             continue
         fn(src, rep, opts); ran += 1
     if not opts.quiet:

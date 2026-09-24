@@ -9,7 +9,7 @@ description: Run renpy-check (static checks that `renpy lint` misses) on a Ren'P
 It catches the class of bugs that `renpy lint` accepts but that crash at runtime:
 missing jump/call targets (including label names stored as strings in dicts), init-order
 NameErrors across files, bare `%` in dialogue, duplicate define/default, screen indentation
-and paren problems, `$` inside `python:` blocks, and more (codes C01–C16, see README).
+and paren problems, `$` inside `python:` blocks, and more (codes C01–C16, plus opt-in C17 for label fall-through; see README).
 
 This file is written for any AI coding agent (Claude Code, Codex, Cursor, Copilot, Gemini CLI, …).
 Nothing in it depends on a particular tool: you only need a shell and Python 3.
@@ -30,6 +30,8 @@ python renpy_check.py <game-folder-or-project-root> --lang en --quiet
 * Exit code 0 = clean, 1 = problems, 2 = bad arguments.
 * If the project keeps label names inside dict tables under keys other than `label`/`loop`, pass `--label-keys label,loop,next`.
 * `--only C03,C11` / `--skip C06` narrow the run; `--lang zh` or `both` for Chinese messages.
+* `--with C17` also reports labels that fall through into the next label (off by default because it is legal Ren'Py; turn it on before inserting new labels into an old file).
+* `python renpy_codemap.py <game> -o codemap.html` writes a searchable HTML map of every file, label (with callers and orphans) and screen — useful before a refactor or when asked "where is X".
 
 ## Reading the output
 

@@ -2,10 +2,10 @@
 
 [![tests](https://github.com/yurthon/renpy-check/actions/workflows/test.yml/badge.svg)](https://github.com/yurthon/renpy-check/actions/workflows/test.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue) ![no dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
 
-Static checks for [Ren'Py](https://www.renpy.org/) projects that `renpy lint` does not do.
-One file, zero dependencies, Python 3.8+. Messages in English and 中文.
+Static checks for [Ren'Py](https://www.renpy.org/) projects that `renpy lint` does not do — plus a one-command **code map** (a searchable HTML page of every file, label and screen and who calls what).
+Two single-file scripts, zero dependencies, Python 3.8+. Messages in English and 中文.
 
-给 Ren'Py 项目做的静态检查，专抓 `renpy lint` 抓不到、真机才崩的坑。单文件、零依赖。[中文说明在下面](#中文说明)。
+给 Ren'Py 项目做的静态检查，专抓 `renpy lint` 抓不到、真机才崩的坑；外加一条命令生成的**代码地图**（可搜索的 HTML：每个文件、label、screen 在哪、谁调用谁）。两个单文件脚本、零依赖。[中文说明在下面](#中文说明)。
 
 ```
 python renpy_check.py path/to/your/game
@@ -42,6 +42,7 @@ python renpy_check.py game --only C08,C11  # run a subset
 python renpy_check.py game --skip C06      # skip a check
 python renpy_check.py game --quiet         # print problems only
 python renpy_check.py game --label-keys label,loop,next   # dict keys whose string values name labels (C03)
+python renpy_check.py game --with C17      # also report label fall-through (off by default)
 ```
 
 It does **not** import Ren'Py and does not need the SDK, so it is fast (a 160-file project takes ~3 s) and safe to run from a pre-commit hook or CI.
@@ -66,6 +67,7 @@ It does **not** import Ren'Py and does not need the SDK, so it is fast (a 160-fi
 | C14 | `init -N` block uses a `define`/`default` that has no priority | `NameError` — plain `define` runs at init 0, i.e. **after** every `init -N` |
 | C15 | module-level assignment to a reserved Ren'Py name (`config`, `renpy`, `store`, `persistent`, …) inside `init python` | anything from silent breakage to `AttributeError` far away from the cause |
 | C16 | `$ x = 1` inside a `python:` block | `SyntaxError: invalid syntax` — `$` means 'this one line is Python' in Ren'Py script; inside a `python:` block you are already in Python, so `$` is just an invalid character |
+| C17 *(opt-in: `--with C17`)* | a label whose last statement is not `jump`/`return`/`call screen`, followed directly by another label — it falls through; also a final `jump` inside an `if` with no `else` | no error today; the day someone inserts a label between the two, the first one silently lands somewhere else |
 
 ### Notes on a few of them
 
@@ -73,7 +75,25 @@ It does **not** import Ren'Py and does not need the SDK, so it is fast (a 160-fi
 
 **C06 and C14 (init order).** Ren'Py runs all `init` blocks sorted by priority, and for equal priority, by file name. A `define X = 1` with no explicit priority is `init 0`, so `init -5 python:` that reads `X` fails on a clean start even though it works after a reload. These two checks are the reason this tool exists.
 
+**C17 is off by default** because falling through is legal and some people use it on purpose (`chapter1` runs straight into `chapter2`). Turn it on with `--with C17` when you want every label to end explicitly; it also flags the sneakier form where the last `jump` sits inside an `if` with no `else`.
+
 **C11.** Ren'Py does not complain about two `define e = …` in different files: the last one loaded wins, and you spend an afternoon wondering why your Character's colour is wrong. It *does* complain about two `default`s.
+
+## renpy-codemap: "where is everything"
+
+```
+python renpy_codemap.py game                  # writes codemap.html next to game/
+python renpy_codemap.py game --lang zh -o map.html --title "My VN"
+```
+
+Scans the project and writes **one self-contained HTML page** with a single search box that filters everything at once:
+
+* every `.rpy` file — line count, its first comment line, its labels, screens and define/default names;
+* every label — where it lives, who jumps/calls it (statements, `Jump()`/`Call()`, `renpy.jump("…")`), and whether it is only reached by falling through from the label above;
+* **labels nobody references** — dead code, or a typo in the caller (engine labels and names that look built from a string prefix are excluded);
+* every screen — where it lives, who shows/calls/uses it.
+
+A comment line near the top of a file, `# keywords: shop haggle bargain` (or `# 关键词：讨价 还价`), adds words to that file's search text without showing them. On a 160-file, 75k-line project it runs in about half a second. No external assets; the page works offline and in dark mode.
 
 ## Use it from CI / pre-commit
 
@@ -141,6 +161,7 @@ python renpy_check.py game            # 扫 game/ 文件夹
 python renpy_check.py . --lang zh     # 只显示中文报错
 python renpy_check.py game --only C08,C11
 python renpy_check.py game --skip C06
+python renpy_check.py game --with C17      # 顺便报 label 落穿（默认关）
 ```
 
 退出码 0＝全绿，1＝有问题。
@@ -165,6 +186,15 @@ python renpy_check.py game --skip C06
 | C14 | `init -N` 块里用了没写优先级的 `define`/`default` | `NameError`——普通 `define` 是 init 0，在所有 `init -N` **之后**才执行 |
 | C15 | `init python` 里在模块层给 `config`/`renpy`/`store`/`persistent` 这类保留名赋值 | 各种离原因很远的诡异报错 |
 | C16 | `python:` 块里面写 `$ x = 1` | `SyntaxError: invalid syntax`——`$` 的意思是「这一行是 Python」，只在 Ren'Py 脚本里用；`python:` 块里本来就是 Python，再写 `$` 就是多了个非法字符 |
+| C17 *(选开：`--with C17`)* | label 最后一句不是 `jump`/`return`/`call screen`、后面紧跟另一个 label——靠「掉下去」；以及最后的 `jump` 在一个没 `else` 的 `if` 里 | 今天不报错；哪天有人往两个 label 中间插一个新 label，上面那个就悄悄走错了 |
+
+### 代码地图 renpy-codemap
+
+```
+python renpy_codemap.py game --lang zh          # 在 game/ 旁边生成 codemap.html
+```
+
+扫一遍项目，出**一张自带搜索框的 HTML**：每个 .rpy 文件（行数、文件头注释、里面的 label/screen/常量）、每个 label 在哪、谁 jump/call 它、是不是只靠上一个 label「掉下来」才到得了、**没人引用的 label**（死代码或者调用处打错名字）、每个 screen 在哪、谁显示它。文件顶上写一行 `# 关键词：讨价 还价`，这些词会进搜索但不显示。几万行的项目半秒出图，离线能开，深色模式可用。
 
 ### 几条值得多说两句
 
