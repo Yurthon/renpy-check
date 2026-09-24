@@ -89,7 +89,12 @@ python renpy_check.py game --quiet || exit 1
 
 ## Use it with an AI coding agent
 
-`skills/renpy-check/SKILL.md` is a short, tool-neutral instruction file (the open [Agent Skills](https://agentskills.io) format: YAML front matter + Markdown) that tells any AI coding agent when to run this checker on a Ren'Py project and how to read its output. It works with whatever agent you use:
+Two skills ship in `skills/`:
+
+* **`renpy-check`** — when and how to run this checker and read its output.
+* **`renpy-gotchas`** — a field guide to 20 Ren'Py behaviours that crash or silently misbehave at runtime (`Return()` returns `True`, un-prefixed `Character()` properties style the name, `define` runs after `init -N`, the store is one namespace, callback `what` has `{w}` stripped, …). Read it before writing `.rpy` code or debugging "works after reload but not on cold start".
+
+Each `SKILL.md` is a short, tool-neutral instruction file (the open [Agent Skills](https://agentskills.io) format: YAML front matter + Markdown) that tells any AI coding agent when to run this checker on a Ren'Py project and how to read its output. It works with whatever agent you use:
 
 | agent | where to put it |
 |-------|-----------------|
@@ -171,7 +176,7 @@ python renpy_check.py game --skip C06
 
 ### 配合 AI 编程助手
 
-`skills/renpy-check/SKILL.md` 是一份不绑定任何家的说明文件（开放的 [Agent Skills](https://agentskills.io) 格式：YAML 头＋Markdown），告诉 AI 编程助手什么时候跑这个检查、怎么读输出。用哪个都行：Claude Code 放 `.claude/skills/`，Codex 放 `.codex/skills/` 或贴进 `AGENTS.md`，Cursor 贴进 `.cursor/rules/`，Copilot 贴进 `.github/copilot-instructions.md`。懒人版一句话写进 `AGENTS.md`：「改完 .rpy 文件后跑 `python renpy_check.py game --quiet`，把每条 `[X]` 修掉再说做完了。」
+`skills/` 里有两份 skill：`renpy-check`（什么时候跑、怎么读输出）和 `renpy-gotchas`（20 条 Ren'Py 真坑手册：`Return()` 返回 True、`Character()` 不带前缀的属性是给名牌的、`define` 跑在 `init -N` 之后、store 是同一个命名空间、callback 的 `what` 已经摘掉 `{w}`……写 .rpy 之前、或者遇到「reload 好了冷启动又崩」时先读）。都是不绑定任何家的说明文件（开放的 [Agent Skills](https://agentskills.io) 格式：YAML 头＋Markdown），告诉 AI 编程助手什么时候跑这个检查、怎么读输出。用哪个都行：Claude Code 放 `.claude/skills/`，Codex 放 `.codex/skills/` 或贴进 `AGENTS.md`，Cursor 贴进 `.cursor/rules/`，Copilot 贴进 `.github/copilot-instructions.md`。懒人版一句话写进 `AGENTS.md`：「改完 .rpy 文件后跑 `python renpy_check.py game --quiet`，把每条 `[X]` 修掉再说做完了。」
 
 ### 范围说明
 
